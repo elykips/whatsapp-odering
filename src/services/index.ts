@@ -1,20 +1,15 @@
-import { feedback } from './feedback/feedback'
-import { usage } from './usage/usage'
-import { reservation } from './reservations/reservations'
-import { review } from './reviews/reviews'
-import { restaurant } from './restaurants/restaurants'
-import { tenant } from './tenants/tenants'
-import { user } from './users/users'
-// For more information about this file see https://dove.feathersjs.com/guides/cli/application.html#configure-functions
-import type { Application } from '../declarations'
+import type { Application } from '@feathersjs/koa'
+
+import { vendors } from './vendors/vendors'
+import { sessions } from './sessions/sessions'
+import { catalog } from './catalog/catalog'
+import { orders } from './orders/orders'
+import { payments } from './payments/payments'
 
 export const services = (app: Application) => {
-  app.configure(feedback)
-  app.configure(usage)
-  app.configure(reservation)
-  app.configure(review)
-  app.configure(restaurant)
-  app.configure(tenant)
-  app.configure(user)
-  // All services will be registered here
+  app.configure(vendors)
+  app.configure(sessions)
+  app.configure(catalog)
+  app.configure(orders)
+  app.configure(payments)
 }

@@ -2,7 +2,7 @@
 import type { RealTimeConnection, Params } from '@feathersjs/feathers'
 import type { AuthenticationResult } from '@feathersjs/authentication'
 import '@feathersjs/transport-commons'
-import type { Application, HookContext } from './declarations'
+import type { Application, HookContext } from '@feathersjs/feathers'
 import { logger } from './logger'
 
 export const channels = (app: Application) => {

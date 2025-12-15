@@ -1,77 +1,31 @@
-// For more information about this file see https://dove.feathersjs.com/guides/cli/client.html
 import { feathers } from '@feathersjs/feathers'
 import type { TransportConnection, Application } from '@feathersjs/feathers'
 import authenticationClient from '@feathersjs/authentication-client'
 import type { AuthenticationClientOptions } from '@feathersjs/authentication-client'
 
-import { feedbackClient } from './services/feedback/feedback.shared'
-export type {
-  Feedback,
-  FeedbackData,
-  FeedbackQuery,
-  FeedbackPatch
-} from './services/feedback/feedback.shared'
+import { vendorsClient } from './services/vendors/vendors.shared'
 
-import { usageClient } from './services/usage/usage.shared'
-export type { Usage, UsageData, UsageQuery, UsagePatch } from './services/usage/usage.shared'
+import { sessionsClient } from './services/sessions/sessions.shared'
+import { catalogClient } from './services/catalog/catalog.shared'
+import { ordersClient } from './services/orders/orders.shared'
+import { paymentsClient } from './services/payments/payments.shared'
 
-import { reservationClient } from './services/reservations/reservations.shared'
-export type {
-  Reservation,
-  ReservationData,
-  ReservationQuery,
-  ReservationPatch
-} from './services/reservations/reservations.shared'
+export type ClientApplication = Application<any>
 
-import { reviewClient } from './services/reviews/reviews.shared'
-export type { Review, ReviewData, ReviewQuery, ReviewPatch } from './services/reviews/reviews.shared'
-
-import { restaurantClient } from './services/restaurants/restaurants.shared'
-export type {
-  Restaurant,
-  RestaurantData,
-  RestaurantQuery,
-  RestaurantPatch
-} from './services/restaurants/restaurants.shared'
-
-import { tenantClient } from './services/tenants/tenants.shared'
-export type { Tenant, TenantData, TenantQuery, TenantPatch } from './services/tenants/tenants.shared'
-
-import { userClient } from './services/users/users.shared'
-export type { User, UserData, UserQuery, UserPatch } from './services/users/users.shared'
-
-export interface Configuration {
-  connection: TransportConnection<ServiceTypes>
-}
-
-export interface ServiceTypes {}
-
-export type ClientApplication = Application<ServiceTypes, Configuration>
-
-/**
- * Returns a typed client for the api app.
- *
- * @param connection The REST or Socket.io Feathers client connection
- * @param authenticationOptions Additional settings for the authentication client
- * @see https://dove.feathersjs.com/api/client.html
- * @returns The Feathers client application
- */
-export const createClient = <Configuration = any,>(
-  connection: TransportConnection<ServiceTypes>,
+export const createClient = (
+  connection: TransportConnection,
   authenticationOptions: Partial<AuthenticationClientOptions> = {}
-) => {
-  const client: ClientApplication = feathers()
+): ClientApplication => {
+  const client = feathers()
 
   client.configure(connection)
   client.configure(authenticationClient(authenticationOptions))
   client.set('connection', connection)
 
-  client.configure(userClient)
-  client.configure(tenantClient)
-  client.configure(restaurantClient)
-  client.configure(reviewClient)
-  client.configure(reservationClient)
-  client.configure(usageClient)
-  client.configure(feedbackClient)
+  client.configure(sessionsClient)
+  client.configure(catalogClient)
+  client.configure(ordersClient)
+  client.configure(paymentsClient)
+  client.configure(vendorsClient)
   return client
 }

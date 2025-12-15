@@ -1,11 +1,7 @@
 import { app } from './app'
-import { logger } from './logger'
 
-const port = app.get('port')
-const host = app.get('host')
-
-process.on('unhandledRejection', reason => logger.error('Unhandled Rejection %O', reason))
+const port = app.get('port') || process.env.PORT || 3030
 
 app.listen(port).then(() => {
-  logger.info(`Feathers app listening on http://${host}:${port}`)
+  console.log(`🚀 Feathers API running on http://localhost:${port}`)
 })

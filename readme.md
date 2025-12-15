@@ -1,42 +1,215 @@
-# api
+n8n (Orchestrator)
 
-> 
+    WhatsApp conversation logic
 
-## About
+    Intent detection & state transitions
 
-This project uses [Feathers](http://feathersjs.com). An open source framework for building APIs and real-time applications.
+    Calls Feathers services
 
-## Getting Started
+    Calls Payment Adapter
 
-1. Make sure you have [NodeJS](https://nodejs.org/) and [npm](https://www.npmjs.com/) installed.
-2. Install your dependencies
+    Sends WhatsApp messages
 
-    ```
-    cd path/to/api
-    npm install
-    ```
+    Never stores secrets
 
-3. Start your app
+    Never writes directly to Ops DB
 
-    ```
-    npm run compile # Compile TypeScript source
-    npm run migrate # Run migrations to set up the database
-    npm start
-    ```
 
-## Testing
+Feathers DB Router (Control Plane + Data Access)
 
-Run `npm test` and all your tests in the `test/` directory will be run.
+    Vendor routing
 
-## Scaffolding
+    Capability enforcement
 
-This app comes with a powerful command line interface for Feathers. Here are a few things it can do:
+    Rate limits
 
-```
-$ npx feathers help                           # Show all commands
-$ npx feathers generate service               # Generate a new Service
-```
+    Billing metering
 
-## Help
+    DB reads/writes
 
-For more information on all the things you can do with Feathers visit [docs.feathersjs.com](http://docs.feathersjs.com).
+    Emits domain events
+
+    No WhatsApp
+
+    No DARAJA calls
+
+Payment Adapter
+
+    Talks to DARAJA
+
+    Handles callbacks
+
+    Fetches M-Pesa secrets securely
+
+    Idempotency
+
+    No business logic
+
+    This separation is the backbone of reliability.
+
+
+
+
+Define the order state machine (write this down)
+
+Put this in a doc and enforce it in code later.
+
+DRAFT
+ ├─ addItem
+ ├─ removeItem
+ ├─ cancel → CANCELLED
+ └─ confirm → CONFIRMED
+CONFIRMED
+ ├─ pay → PAID
+ └─ cancel → CANCELLED
+PAID
+ └─ terminal
+CANCELLED
+ └─ terminal
+
+
+Define payment rules (compliance & trust)
+
+    Freeze these rules today:
+
+    STK is triggered only after user replies PAY
+
+    One STK attempt per payment_intent
+
+    Max 3 payment_intents/day/customer
+
+    Callback must be idempotent
+
+    Money goes directly to vendor shortcode
+
+    Platform never holds funds
+
+Repositories
+
+    orchestrator-n8n/
+    workflows/
+    README.md
+
+    db-router-feathers/
+    src/
+    package.json
+    tsconfig.json
+    README.md
+
+    payment-adapter/
+    src/
+    package.json
+    README.md
+
+
+# Migrate & Seed Platform DB
+npx knex migrate:latest --env platform
+npx knex seed:run --env platform
+
+# Migrate & Seed Ops DB
+npx knex migrate:latest --env ops
+npx knex seed:run --env ops
+
+
+# Verification checklist
+-- platform DB
+\dt
+SELECT * FROM vendors;
+SELECT * FROM catalog_items;
+
+-- ops DB
+\dt
+SELECT * FROM orders;
+SELECT * FROM payments;
+
+# Creating Dedicated DB for clients
+DATABASE_URL=postgres://tenant_acme:strong-password@localhost:5432/tenant_acme \
+npx knex migrate:latest \
+  --env tenant
+
+# Register dedicated Enteprise User. with dedicated db instance
+insert into vendors (
+  id,
+  name,
+  isolation_level,
+  db_target,
+  created_at,
+  updated_at
+)
+values (
+  gen_random_uuid(),
+  'ACME Enterprise',
+  'dedicated_db',
+  '{
+    "type": "postgres",
+    "host": "localhost",
+    "port": 5432,
+    "database": "tenant_acme",
+    "user": "tenant_acme",
+    "passwordSecretRef": "plain:strong-password"
+  }',
+  now(),
+  now()
+)
+returning id;
+
+# Enable required capabilities
+-- Enable catalog
+insert into vendor_capabilities (
+  id,
+  vendor_id,
+  capability_key,
+  enabled,
+  created_at
+)
+values (
+  gen_random_uuid(),
+  '<enterprise-vendor-id>',
+  'commerce.catalog',
+  true,
+  now()
+);
+
+-- Enable orders
+insert into vendor_capabilities (
+  id,
+  vendor_id,
+  capability_key,
+  enabled,
+  created_at
+)
+values (
+  gen_random_uuid(),
+  '<enterprise-vendor-id>',
+  'commerce.orders',
+  true,
+  now()
+);
+
+-- Enable payments (for later)
+insert into vendor_capabilities (
+  id,
+  vendor_id,
+  capability_key,
+  enabled,
+  created_at
+)
+values (
+  gen_random_uuid(),
+  '<enterprise-vendor-id>',
+  'payments.mpesa_stk',
+  true,
+  now()
+);
+
+
+# Test creating order for shared db
+rop@elypad-2 api % curl -X POST http://localhost:3030/orders \
+  -H "Content-Type: application/json" \
+  -H "x-vendor-id: c7af4716-f9ab-465d-9afb-f1047bf37a40" \
+  -H "x-internal-key: dev-internal-secret" \
+  -d '{
+    "vendor_id": "c7af4716-f9ab-465d-9afb-f1047bf37a40",
+    "customer_phone": "254703283383",
+    "amount": 30
+  }'
