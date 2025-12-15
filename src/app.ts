@@ -16,6 +16,8 @@ import { postgresql } from './postgresql'
 import { services } from './services'
 
 import type { ServiceTypes } from './declarations'
+import { registerPaymentsStk } from './services/payments/payments.stk'
+import { registerMpesaCallback } from './webhooks/mpesaCallback'
 
 const app: Application<ServiceTypes> = koa(feathers())
 
@@ -92,6 +94,8 @@ Promise.all([
 // Services (ONLY HERE)
 // ─────────────────────────────
 app.configure(services)
+registerPaymentsStk(app)
+registerMpesaCallback(app)
 
 app.use(async (ctx, next) => {
   if (ctx.path === '/debug/db') {

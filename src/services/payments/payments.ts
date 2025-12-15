@@ -1,26 +1,23 @@
+import { Application } from '@feathersjs/koa'
 import { PaymentsService } from './payments.class'
 import { authenticateInternal } from '../../hooks/authenticateInternal'
-import { enforceCapability } from '../../hooks/enforceCapability'
-import type { Application } from '@feathersjs/koa'
 import { resolveTenantDb } from '../../hooks/resolveTenantDb'
+import { enforceCapability } from '../../hooks/enforceCapability'
 
 export const payments = (app: Application) => {
-  app.use(
-    'payments',
-    new PaymentsService({
-      Model: app.get('opsDb'),
-      name: 'payments',
-      paginate: app.get('paginate')
-    }),
-    { methods: ['create', 'patch'] }
-  )
+  app.use('payments', new PaymentsService({
+    Model: app.get('platformDb'),
+    name: 'payments',
+    paginate: app.get('paginate')
+  }))
 
   app.service('payments').hooks({
     before: {
       all: [
-        authenticateInternal, 
-        resolveTenantDb, 
-        enforceCapability('payments.mpesa_stk')]
+        authenticateInternal,
+        resolveTenantDb,
+        enforceCapability('payments.core')
+      ]
     }
   })
 }

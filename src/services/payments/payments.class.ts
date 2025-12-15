@@ -1,79 +1,45 @@
 import { KnexService } from '@feathersjs/knex'
-import type { Application } from '@feathersjs/koa'
-import type { KnexAdapterParams } from '@feathersjs/knex'
-import type { Id } from '@feathersjs/feathers'
-import { v4 as uuid } from 'uuid'
+import { randomUUID } from 'crypto'
+import { BadRequest, Conflict, NotFound } from '@feathersjs/errors'
+import { emitEvent } from '../../lib/events'
 
 export class PaymentsService extends KnexService {
-  app!: Application
+  async create(data: any, params: any) {
+    const vendorId = params.vendor_id
+    if (!vendorId) throw new BadRequest('vendor_id required')
 
-  async setup(app: Application) {
-    this.app = app
-  }
+    const { order_id, amount } = data
+    if (!order_id) throw new BadRequest('order_id required')
+    if (!amount || amount <= 0) throw new BadRequest('invalid amount')
 
-  async create(
-    data: any | any[],
-    params?: KnexAdapterParams
-  ): Promise<any | any[]> {
-    const db = this.app.get('opsDb')
+    const db = params.adapter.Model
 
-    if (Array.isArray(data)) {
-      const payments = data.map(p => ({
-        id: uuid(),
-        order_id: p.order_id,
-        amount: p.amount,
-        phone: p.customer_phone,
-        status: 'INITIATED'
-      }))
+    const order = await db('orders').where({ id: order_id }).first()
+    if (!order) throw new NotFound('Order not found')
+    if (order.status === 'paid') throw new Conflict('Order already paid')
 
-      await db('payments').insert(payments)
-      return payments
-    }
+    const existing = await db('payments')
+      .where({ order_id, status: 'success' })
+      .first()
+
+    if (existing) throw new Conflict('Successful payment already exists')
 
     const payment = {
-      id: uuid(),
-      order_id: data.order_id,
-      amount: data.amount,
-      phone: data.customer_phone,
-      status: 'INITIATED'
+      id: randomUUID(),
+      vendor_id: vendorId,
+      order_id,
+      amount,
+      currency: 'KES',
+      method: data.method || 'mpesa_stk',
+      provider: data.provider || 'safaricom',
+      status: 'initiated',
+      metadata: {}
     }
 
-    await db('payments').insert(payment)
-    return payment
-  }
+    const created = await super.create(payment, params)
 
-  async patch(
-    id: Id | null,
-    data: any,
-    params?: KnexAdapterParams
-  ): Promise<any | any[]> {
-    const db = this.app.get('opsDb')
+    await emitEvent('payment.created', created)
 
-    // 🔹 BULK PATCH (id === null)
-    if (id === null) {
-      const { query } = params || {}
-      if (!query) {
-        throw new Error('Bulk patch requires params.query')
-      }
-
-      await db('payments')
-        .where(query)
-        .update({
-          ...data,
-          updated_at: db.fn.now()
-        })
-
-      return db('payments').where(query)
-    }
-
-    // 🔹 SINGLE PATCH
-    await db('payments')
-      .where({ id })
-      .update({
-        ...data,
-        updated_at: db.fn.now()
-      })
-
-    return db('payments').where({ id }).first()
+    return created
   }
 }
