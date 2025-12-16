@@ -1,9 +1,10 @@
 {
-  "host": "localhost",
+  "host": "0.0.0.0",
   "port": 3030,
   "public": "./public/",
   "origins": [
-    "http://localhost:3030"
+    "https://orders.kwetu.co.uk",
+    "https://www.orders.kwetu.co.uk"
   ],
   "paginate": {
     "default": 10,
@@ -20,7 +21,7 @@
   "authentication": {
     "entity": "user",
     "service": "users",
-    "secret": "N2emZB5HCJFSKn9MjPbx2YCS8raEj9vG",
+    "secret": "${JWT_SECRET}",
     "authStrategies": [
       "jwt",
       "local"
@@ -29,7 +30,7 @@
       "header": {
         "typ": "access"
       },
-      "audience": "https://yourdomain.com",
+      "audience": "https://orders.kwetu.co.uk",
       "algorithm": "HS256",
       "expiresIn": "1d"
     },
